@@ -261,6 +261,24 @@ PAUSA_ENTRE_PETICIONES = 2.5
 # Yahoo Finance aguanta bastante más ritmo que CoinGecko
 PAUSA_BOLSA = 0.7
 
+# ---------------------------------------------------------------------------
+# PRESUPUESTO DE TIEMPO
+#
+# Sin esto, un mal día de rate limits puede dejar el informe colgado 45 minutos:
+# 32 peticiones x 3 reintentos x esperas crecientes se multiplican deprisa.
+#
+# Con un presupuesto, cuando se agota el tiempo el sistema deja de pedir cosas
+# nuevas y genera el informe con lo que haya conseguido. Prefiero un informe
+# incompleto que te avisa de lo que falta, a uno perfecto que no llega nunca.
+# ---------------------------------------------------------------------------
+
+PRESUPUESTO_CRIPTO_SEGUNDOS = 8 * 60
+PRESUPUESTO_BOLSA_SEGUNDOS = 5 * 60
+
+# Cuántos rechazos seguidos hacen falta para dar por saturada una fuente y
+# dejar de insistir durante esta ejecución.
+RECHAZOS_SEGUIDOS_PARA_RENDIRSE = 4
+
 # Cuántos segundos vale una respuesta cacheada (evita repetir llamadas si
 # ejecutas el script varias veces seguidas mientras trasteas)
 TTL_CACHE_SEGUNDOS = 60 * 30  # 30 minutos

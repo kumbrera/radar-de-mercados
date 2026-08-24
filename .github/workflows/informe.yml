@@ -34,6 +34,9 @@ concurrency:
 jobs:
   generar:
     runs-on: ubuntu-latest
+    # Tope de seguridad: si algo se atasca, se corta solo en vez de comerse la
+    # cuota. El presupuesto interno (config.py) debería pararlo mucho antes.
+    timeout-minutes: 25
     steps:
       - name: Descargar el repositorio
         uses: actions/checkout@v4
@@ -57,10 +60,18 @@ jobs:
           python test_csv.py
           python test_resolver.py
 
+      # Sin --silencio A PROPÓSITO: aquí el log es la única forma de saber qué
+      # está pasando. Un fallo silencioso es un fallo que no se puede arreglar.
       - name: Generar el informe
         id: informe
+        env:
+          # Opcional pero MUY recomendable. CoinGecko limita mucho el tráfico
+          # que viene de las IPs compartidas de GitHub. Con una clave gratuita
+          # (Demo) el problema desaparece.
+          # Se añade en: Settings > Secrets and variables > Actions > New secret
+          COINGECKO_API_KEY: ${{ secrets.COINGECKO_API_KEY }}
         run: |
-          python radar.py --web public --silencio
+          python -u radar.py --web public
           echo "generado=si" >> "$GITHUB_OUTPUT"
 
       # Si las fuentes de datos fallan, no queremos publicar una página vacía

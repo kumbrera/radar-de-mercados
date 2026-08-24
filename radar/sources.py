@@ -43,6 +43,12 @@ class ClienteAPI:
         self._ultima_peticion = 0.0
         self.peticiones_hechas = 0
         self.fallos = []
+        # Presupuesto de tiempo: pasado este punto dejamos de pedir cosas nuevas
+        # y generamos el informe con lo que tengamos.
+        self._limite = time.monotonic() + config.PRESUPUESTO_CRIPTO_SEGUNDOS
+        self._rechazos_seguidos = 0
+        self._saturado = False
+        self._aviso_dado = False
 
     # -- caché --------------------------------------------------------------
 
@@ -77,11 +83,29 @@ class ClienteAPI:
         if transcurrido < config.PAUSA_ENTRE_PETICIONES:
             time.sleep(config.PAUSA_ENTRE_PETICIONES - transcurrido)
 
+    def _sin_tiempo(self) -> bool:
+        """¿Se ha agotado el presupuesto o la fuente está saturada?"""
+        if self._saturado:
+            return True
+        if time.monotonic() > self._limite:
+            if not self._aviso_dado:
+                self._log("  ! Se ha agotado el tiempo previsto para CoinGecko. "
+                          "Sigo con los datos que ya tengo.")
+                self.fallos.append(
+                    "CoinGecko: presupuesto de tiempo agotado; el informe puede "
+                    "estar incompleto.")
+                self._aviso_dado = True
+            return True
+        return False
+
     def get(self, url: str, params: dict | None = None) -> Any | None:
         ruta = self._ruta_cache(url, params)
         cacheado = self._leer_cache(ruta)
         if cacheado is not None:
             return cacheado
+
+        if self._sin_tiempo():
+            return None
 
         for intento in range(1, config.REINTENTOS + 1):
             self._esperar_turno()
@@ -91,13 +115,27 @@ class ClienteAPI:
                 self.peticiones_hechas += 1
 
                 if r.status_code == 429:
-                    espera = 15 * intento
-                    self._log(f"  rate limit alcanzado, esperando {espera}s...")
+                    self._rechazos_seguidos += 1
+                    if self._rechazos_seguidos >= config.RECHAZOS_SEGUIDOS_PARA_RENDIRSE:
+                        # Insistir no sirve de nada: la fuente nos ha cortado el
+                        # grifo. Mejor rendirse rápido que colgar el informe.
+                        self._saturado = True
+                        self._log(
+                            f"  ! CoinGecko lleva {self._rechazos_seguidos} rechazos "
+                            "seguidos. Dejo de insistir en esta ejecución.")
+                        self.fallos.append(
+                            "CoinGecko está limitando las peticiones. Una clave "
+                            "gratuita (COINGECKO_API_KEY) lo soluciona.")
+                        return None
+                    espera = min(8 * intento, 20)
+                    self._log(f"  rate limit ({self._rechazos_seguidos}), "
+                              f"esperando {espera}s...")
                     time.sleep(espera)
                     continue
 
                 r.raise_for_status()
                 datos = r.json()
+                self._rechazos_seguidos = 0     # ha ido bien: reiniciamos el contador
                 self._escribir_cache(ruta, datos)
                 return datos
 

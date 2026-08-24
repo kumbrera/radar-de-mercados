@@ -55,6 +55,10 @@ class ClienteBolsa:
         self.fallos: list[str] = []
         self._ultima = 0.0
         self._crumb: str | None = None
+        self._limite = time.monotonic() + config.PRESUPUESTO_BOLSA_SEGUNDOS
+        self._rechazos_seguidos = 0
+        self._saturado = False
+        self._aviso_dado = False
 
     def _log(self, msg: str) -> None:
         if self.verbose:
@@ -96,7 +100,24 @@ class ClienteBolsa:
         if t < config.PAUSA_BOLSA:
             time.sleep(config.PAUSA_BOLSA - t)
 
+    def _sin_tiempo(self) -> bool:
+        if self._saturado:
+            return True
+        if time.monotonic() > self._limite:
+            if not self._aviso_dado:
+                self._log("  ! Se ha agotado el tiempo previsto para Yahoo Finance. "
+                          "Sigo con los datos que ya tengo.")
+                self.fallos.append(
+                    "Yahoo Finance: presupuesto de tiempo agotado; faltan datos "
+                    "de bolsa en este informe.")
+                self._aviso_dado = True
+            return True
+        return False
+
     def _get(self, url: str, params: dict | None = None, texto: bool = False):
+        if self._sin_tiempo():
+            return None
+
         for intento in range(1, config.REINTENTOS + 1):
             self._pausa()
             try:
@@ -104,11 +125,21 @@ class ClienteBolsa:
                 self._ultima = time.time()
                 self.peticiones_hechas += 1
                 if r.status_code in (429, 999):
-                    espera = 10 * intento
+                    self._rechazos_seguidos += 1
+                    if self._rechazos_seguidos >= config.RECHAZOS_SEGUIDOS_PARA_RENDIRSE:
+                        self._saturado = True
+                        self._log(f"    ! Yahoo lleva {self._rechazos_seguidos} "
+                                  "rechazos seguidos. Dejo de insistir.")
+                        self.fallos.append(
+                            "Yahoo Finance está limitando las peticiones desde "
+                            "esta máquina.")
+                        return None
+                    espera = min(6 * intento, 15)
                     self._log(f"    límite alcanzado, esperando {espera}s...")
                     time.sleep(espera)
                     continue
                 r.raise_for_status()
+                self._rechazos_seguidos = 0
                 return r.text if texto else r.json()
             except (requests.RequestException, json.JSONDecodeError) as e:
                 self._ultima = time.time()
