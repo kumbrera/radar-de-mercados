@@ -52,9 +52,9 @@ nombre,isin,tipo,unidades,precio_medio,divisa
 # Trade Republic y compara; si es otro, cámbialo aquí. El informe te avisará
 # solo si el precio no cuadra.
 
-S&P 500 EUR (Acc),IE00B5BMR087,etf,1.370175,131.37,EUR
+S&P 500 EUR (Acc),LU1681048804,etf,1.370175,131.37,EUR
 Constellation Energy,US21037T1097,accion,0.255264,235.05,EUR
-PUIG Brands,ES0105630315,accion,3.21396,17.18,EUR
+PUIG Brands,ES0105777017,accion,3.21396,17.18,EUR
 
 
 # --- Cómo se añaden operaciones nuevas -------------------------------------
