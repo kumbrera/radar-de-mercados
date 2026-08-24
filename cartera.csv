@@ -1,0 +1,75 @@
+# ===========================================================================
+# TU CARTERA
+#
+# Una línea por operación. Nunca borres ni corrijas líneas anteriores:
+# solo añade al final. El sistema hace las cuentas.
+#
+#   HAS COMPRADO ->  unidades en POSITIVO
+#   HAS VENDIDO  ->  unidades en NEGATIVO
+#
+# ---------------------------------------------------------------------------
+# LAS COLUMNAS
+#
+#   nombre        Cómo quieres que aparezca en el informe. Lo eliges tú.
+#
+#   isin          USA EL ISIN, no el ticker. Son 12 caracteres que empiezan
+#                 por dos letras: ES0105630315, IE00B5BMR087, US21037T1097.
+#
+#                 ¿Por qué el ISIN y no el ticker? Porque el ISIN es el mismo
+#                 en todo el mundo, y el ticker cambia según la bolsa. PUIG es
+#                 "PUIG" en Madrid y "B1B" en Alemania: el mismo papel con dos
+#                 nombres. Con el ISIN no hay ambigüedad posible.
+#
+#                 Dónde está en Trade Republic: entra en el activo, baja hasta
+#                 "Perfil" o "Información". Ahí lo tienes, para copiar y pegar.
+#
+#                 Para criptos no hay ISIN: pon el nombre en inglés y
+#                 minúscula (bitcoin, ethereum, solana, cardano).
+#
+#   tipo          etf | accion | cripto | renta_fija
+#
+#   unidades      Las que te diga el bróker, con todos sus decimales.
+#                 En NEGATIVO si es una venta.
+#
+#   precio_medio  El precio POR UNIDAD de esa operación.
+#                 Si no lo tienes: lo que pagaste entre las unidades.
+#                 (180 € ÷ 1,370175 participaciones = 131,37 por unidad)
+#
+#   divisa        En qué moneda te lo cobraron A TI.
+#                 Con Trade Republic siempre EUR, aunque el activo cotice
+#                 en dólares. Déjalo en EUR y no te equivocas.
+#
+# Los decimales valen con punto o con coma. Las líneas que empiezan por # se
+# ignoran: úsalas para tomar notas.
+# ===========================================================================
+
+nombre,isin,tipo,unidades,precio_medio,divisa
+
+# --- Tus posiciones actuales -----------------------------------------------
+#
+# El único dato sin verificar es el ISIN del ETF: hay varios S&P 500 en euros
+# y los 131,37 € que pagaste no me cuadran con ninguno que conozca. Ábrelo en
+# Trade Republic y compara; si es otro, cámbialo aquí. El informe te avisará
+# solo si el precio no cuadra.
+
+S&P 500 EUR (Acc),IE00B5BMR087,etf,1.370175,131.37,EUR
+Constellation Energy,US21037T1097,accion,0.255264,235.05,EUR
+PUIG Brands,ES0105630315,accion,3.21396,17.18,EUR
+
+
+# --- Cómo se añaden operaciones nuevas -------------------------------------
+# (están comentadas: quítales la # del principio y cambia los números)
+#
+# Compras 100 € de bitcoin a 58.400 € la unidad:
+# Bitcoin,bitcoin,cripto,0.001712,58400,EUR
+#
+# Compras más del mismo ETF. NO toques la línea de arriba, añade otra:
+# el sistema suma las unidades y calcula el precio medio ponderado.
+# S&P 500 EUR (Acc),IE00B5BMR087,etf,0.750000,134.20,EUR
+#
+# Vendes la mitad de PUIG. Unidades en negativo, al precio al que vendiste:
+# PUIG Brands,ES0105630315,accion,-1.60698,19.40,EUR
+#
+# Vendes PUIG entera. Todas las unidades que te quedaban, en negativo.
+# La posición desaparecerá del informe.
+# PUIG Brands,ES0105630315,accion,-3.21396,19.40,EUR

@@ -1,0 +1,111 @@
+name: Informe diario
+
+# Cuándo se ejecuta:
+on:
+  schedule:
+    # 07:10 UTC = 08:10 en invierno y 09:10 en verano (hora peninsular).
+    # GitHub usa siempre UTC y no entiende de cambios de hora.
+    # Los minutos a :10 y no a :00 a propósito: a las horas en punto GitHub
+    # tiene picos de carga y las tareas programadas se retrasan bastante.
+    - cron: "10 7 * * *"
+
+  # Cada vez que edites cartera.csv (también desde el móvil), se regenera.
+  push:
+    branches: [main]
+    paths:
+      - "cartera.csv"
+      - "radar/**"
+      - "radar.py"
+      - ".github/workflows/informe.yml"
+
+  # Y siempre puedes lanzarlo a mano desde la pestaña Actions.
+  workflow_dispatch:
+
+permissions:
+  contents: write      # para guardar el histórico en el repositorio
+  pages: write         # para publicar
+  id-token: write
+
+# Si se solapan dos ejecuciones, que la nueva espere en vez de pelearse.
+concurrency:
+  group: informe
+  cancel-in-progress: false
+
+jobs:
+  generar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pillow          # solo para generar los iconos de la app
+
+      - name: Comprobar que los cálculos siguen siendo correctos
+        run: |
+          python test_indicadores.py
+          python test_cartera.py
+          python test_csv.py
+          python test_resolver.py
+
+      - name: Generar el informe
+        id: informe
+        run: |
+          python radar.py --web public --silencio
+          echo "generado=si" >> "$GITHUB_OUTPUT"
+
+      # Si las fuentes de datos fallan, no queremos publicar una página vacía
+      # ni romper la que ya estaba: mejor dejar la anterior y avisar.
+      - name: Si algo ha fallado, conservar el informe anterior
+        if: failure()
+        run: |
+          echo "::warning::El informe de hoy no se ha podido generar."
+          echo "La página sigue mostrando el último informe correcto."
+
+      # Cada ejecución empieza en una máquina limpia. Si no guardamos esto en el
+      # repositorio, el histórico de precios se perdería todos los días.
+      # La página de hoy NO se guarda: se publica directamente desde el
+      # artefacto y volver a commitearla solo engordaría el repositorio.
+      - name: Guardar el histórico en el repositorio
+        if: success()
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add --force data/historico.sqlite3 public/historico/ 2>/dev/null || true
+
+          if git diff --staged --quiet; then
+            echo "Sin cambios que guardar."
+          else
+            git commit -m "Informe del $(date +%Y-%m-%d)"
+            # Si mientras tanto has editado cartera.csv desde el móvil, el push
+            # chocaría. Reintegramos y reintentamos en vez de fallar.
+            git pull --rebase --autostash origin main || true
+            git push || echo "::warning::No se ha podido guardar el histórico (se reintentará mañana)."
+          fi
+
+      - name: Preparar la publicación
+        if: success()
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  publicar:
+    needs: generar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    steps:
+      - name: Publicar en GitHub Pages
+        id: pages
+        uses: actions/deploy-pages@v4

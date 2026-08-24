@@ -1,0 +1,33 @@
+# Caché de las APIs: se regenera sola, no tiene sentido guardarla
+data/cache/
+data/*.log
+
+# Informes que genera tu ordenador al ejecutarlo a mano
+salidas/*.html
+
+# La página de hoy se regenera en cada ejecución y se publica directamente
+# desde ahí, así que no la guardamos en el repositorio: solo haría que
+# creciera unos 400 KB al día sin aportar nada.
+public/index.html
+public/icono.svg
+public/icono-*.png
+public/manifest.webmanifest
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# --- Lo que SÍ se guarda, a propósito ---------------------------------------
+#
+#   data/historico.sqlite3   la serie de precios y del valor de tu cartera.
+#                            Cada ejecución en GitHub empieza en una máquina
+#                            limpia: si no se guardara aquí, el histórico se
+#                            perdería todos los días.
+#
+#   public/historico/*.html  los informes de días anteriores, para poder
+#                            consultarlos desde el móvil.
+#
+#   cartera.csv              tus posiciones. Con el repositorio en privado no
+#                            las ve nadie más que tú.
